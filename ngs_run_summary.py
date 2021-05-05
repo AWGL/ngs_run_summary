@@ -4,7 +4,78 @@ import sys
 from interop import imaging, summary
 import pandas as pd
 import xmltodict
+import argparse
 
+
+
+def default_args(start_arg,end_arg):
+	if start_arg == "last_month":
+		todaydate = datetime.date.today()
+		firstday = todaydate.replace(day=1)
+		prev_month_end = firstday - datetime.timedelta(days=1)
+		prev_month_start = prev_month_end.replace(day=1)
+		start_date = prev_month_start.strftime("%y%m%d")
+	else:
+		start_date = start_arg
+
+	if end_arg == "last_month":
+		todaydate = datetime.date.today()
+		firstday = todaydate.replace(day=1)
+		prev_month_end = firstday - datetime.timedelta(days=1)
+		end_date = prev_month_end.strftime("%y%m%d")
+	else:
+		end_date = end_arg
+
+	return start_date, end_date
+
+
+
+def check_args(start,end):
+	'''
+	 Logic check for inputs if not defaulted. Must be 6 characters long, end must be after first,
+	middle 2 characters must be between 01 and 12, end two characters must be between 01 and 31,
+	'''
+	# check start
+	if len(start) == 6:
+		if 1 <= int(start[2:4]) <= 12:
+			if 1 <= int(start[4:6]) <= 31:
+				start_test = True
+			else:
+				start_test = False
+		else:
+			start_test = False
+	else:
+		start_test = False
+
+
+	# check end
+	if len(end) == 6:
+		if 1 <= int(end[2:4]) <= 12:
+			if 1 <= int(end[4:6]) <= 31:
+				end_test = True
+			else:
+				end_test = False
+		else:
+			end_test = False
+	else:
+		end_test = False
+
+
+	# check both tests are True and end is >= start
+	if start_test == True and end_test == True:
+		if end >= start:
+			continue_run = True
+		else:
+			end_ge_start = False
+			continue_run = False
+	else:
+		end_ge_start = "NA"
+		continue_run = False
+
+	# handy STDOUT
+	print("Input checks- start:", start_test, ", end:", end_test, ", start >= end:", end_ge_start)
+
+	return continue_run
 
 
 def get_interops_data(run_folder_path):
@@ -122,62 +193,64 @@ def get_pipeline_name(run_folder_path):
 
 '''
 ############################ PROGRAMME CODE ##################################
-	check if input variables were given, else get default as "last month"
-	if only one date value given then will still default to last month as start and end dates
-are over written
 '''
-#	arg dates must be YYMMDD
-try:
-	startDate = sys.argv[1]
-	endDate = sys.argv[2]
 
-except IndexError:
-	print ("Invalid/No dates inputted. Defaulted to last month")
-	today = datetime.date.today()
-	firstday = today.replace(day=1)
-	prevMonthEnd = firstday - datetime.timedelta(days=1)
-	prevMonthStart = prevMonthEnd.replace(day=1)
-	startDate = prevMonthStart.strftime("%y%m%d")
-	endDate = prevMonthEnd.strftime("%y%m%d")
+# args
+parser = argparse.ArgumentParser()
+parser.add_argument("--startdate","-s", default = "last_month", help = "Start date for range of NGS runs. Inclusive. Default: last month. Format: YYMMDD",)
+parser.add_argument("--enddate","-e", default = "last_month", help = "End date for range of NGS runs. Inclusive. Default: last month. Format: YYMMDD")
+args = parser.parse_args()
 
-print("Start: ",startDate)
-print("End: ",endDate)
-
-'''
-	Find run folders in data directory and loop over those which are within the date window specific by 
-start and end dates
-	Create a counter so in the event of no runs in the time period it will just return "there was 0 runs"
-and would not look like a code failure
-	Append summary data for each run to a dataframe to export
-'''
-#	create blank DF
-col_headers = ["Run_ID","Yield_g","Percent_gt_Q30","Percent_pass_filter","Experiment_name","Sequencer_side","Flowcell_type","Pipeline(s)"]
-ngs_summary_df = pd.DataFrame(columns = col_headers)
-
-path = "/home/kal/ngs_run_summary/data/"
-
-#	loop through all folders in the data folder
-dir_list = os.listdir(path)
-run_counter = 0
-for folder in dir_list:
-	if int(startDate) <= int(folder[:6]) <= int(endDate):
-		run_counter +=1
-		run_folder = os.path.join(path,folder)
-
-		interop_out = get_interops_data(run_folder)
-		run_summary = interop_out
-
-		parameters_out = get_run_parameters(run_folder)
-		run_summary.extend(parameters_out)
-
-		summarysheet_out = get_pipeline_name(run_folder)
-		run_summary.extend(summarysheet_out)
-
-		ngs_summary_df.loc[len(ngs_summary_df)] = run_summary
+# check for start and end date inputs and make default if "last_month"(no input)
+start_date, end_date = default_args(args.startdate,args.enddate)
+print("start date:", start_date, ", end date:", end_date)
 
 
-run_count = "There were " + str(run_counter) + " runs between " + startDate + " and " + endDate
-print(run_count)
+#check date is as expected YYMMDD
+continue_run = check_args(start_date, end_date)
 
-#	output to csv
-ngs_summary_df.to_csv('ngs_run_summary_'+startDate+'_'+endDate+'.csv', index = False)
+#start run only if check_args = True
+if continue_run == True:
+	print("Input arguments checked successfully")
+
+	'''
+		Find run folders in data directory and loop over those which are within the date window specific by 
+	start and end dates
+		Create a counter so in the event of no runs in the time period it will just return "there was 0 runs"
+	and would not look like a code failure
+		Append summary data for each run to a dataframe to export
+	'''
+	#	create blank DF
+	col_headers = ["Run_ID","Yield_g","Percent_gt_Q30","Percent_pass_filter","Experiment_name","Sequencer_side","Flowcell_type","Pipeline(s)"]
+	ngs_summary_df = pd.DataFrame(columns = col_headers)
+
+	path = "/home/kal/ngs_run_summary/data/"
+
+	#	loop through all folders in the data folder
+	dir_list = os.listdir(path)
+	run_counter = 0
+	for folder in dir_list:
+		if int(start_date) <= int(folder[:6]) <= int(end_date):
+			run_counter +=1
+			run_folder = os.path.join(path,folder)
+
+			interop_out = get_interops_data(run_folder)
+			run_summary = interop_out
+
+			parameters_out = get_run_parameters(run_folder)
+			run_summary.extend(parameters_out)
+
+			summarysheet_out = get_pipeline_name(run_folder)
+			run_summary.extend(summarysheet_out)
+
+			ngs_summary_df.loc[len(ngs_summary_df)] = run_summary
+
+
+	run_count = "There were " + str(run_counter) + " runs between " + start_date + " and " + end_date
+	print(run_count)
+
+	#output to csv
+	ngs_summary_df.to_csv('ngs_run_summary_'+start_date+'_'+end_date+'.csv', index = False)
+
+else:
+	print("Run failed, check input arguments are logical and in the format YYMMDD")
