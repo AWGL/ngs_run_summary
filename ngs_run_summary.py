@@ -9,6 +9,10 @@ import argparse
 
 
 def default_args(start_arg,end_arg):
+	'''
+	take supplied arguments and if none given will have defaulted to "last_month" which is used to 
+	give a start and end date relating to last month as automatic
+	'''
 	if start_arg == "last_month":
 		todaydate = datetime.date.today()
 		firstday = todaydate.replace(day=1)
@@ -65,6 +69,7 @@ def check_args(start,end):
 	if start_test == True and end_test == True:
 		if end >= start:
 			continue_run = True
+			end_ge_start = "NA"
 		else:
 			end_ge_start = False
 			continue_run = False
@@ -246,7 +251,7 @@ if continue_run == True:
 			ngs_summary_df.loc[len(ngs_summary_df)] = run_summary
 
 
-	run_count = "There were " + str(run_counter) + " runs between " + start_date + " and " + end_date
+	run_count = f"There were {run_counter} runs between  {start_date} and {end_date}"
 	print(run_count)
 
 	#output to csv
