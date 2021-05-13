@@ -255,7 +255,7 @@ if continue_run == True:
 	print(run_count)
 
 	#output to csv
-	ngs_summary_df.to_csv('ngs_run_summary_'+start_date+'_'+end_date+'.csv', index = False)
+	ngs_summary_df.to_csv('/data_heath/temp/novaseq_summary/ngs_run_summary_'+start_date+'_'+end_date+'.csv', index = False)
 
 else:
 	print("Run failed, check input arguments are logical and in the format YYMMDD")
