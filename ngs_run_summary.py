@@ -229,7 +229,7 @@ if continue_run == True:
 	col_headers = ["Run_ID","Yield_g","Percent_gt_Q30","Percent_pass_filter","Experiment_name","Sequencer_side","Flowcell_type","Pipeline(s)"]
 	ngs_summary_df = pd.DataFrame(columns = col_headers)
 
-	path = "/home/kal/ngs_run_summary/data/"
+	path = "/data_heath/archive/novaseq/"
 
 	#	loop through all folders in the data folder
 	dir_list = os.listdir(path)
